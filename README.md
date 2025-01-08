@@ -149,4 +149,4 @@ FROM( SELECT *, -- Assigned segments for all RFM score combinations. Used indivi
             END AS rfm_segment 
 
       FROM  rfm_scores);
-`code`
+
