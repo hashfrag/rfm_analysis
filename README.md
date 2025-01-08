@@ -5,7 +5,9 @@ RFM &amp; Customer Segmentation Analysis
 ![Dashboard 1](https://github.com/user-attachments/assets/1e8cef1a-fb64-45af-8aaf-d7bc70d8ef7f)
 
 
-`code`   
+
+
+```
 WITH  rfm_values AS (
       SELECT  
             CustomerID,
@@ -149,4 +151,4 @@ FROM( SELECT *, -- Assigned segments for all RFM score combinations. Used indivi
             END AS rfm_segment 
 
       FROM  rfm_scores);
-
+```
