@@ -3,15 +3,19 @@
 Link to the Tableau Dashboard: </br>
 https://public.tableau.com/app/profile/ovidijus.pelakauskas/viz/M3S3RFM_17335051289480/Dashboard1 </br>
 
-### Documentation <em>(click on individual topic to expand)</em>
-<details><summary><strong>Goal of the Project</strong></summary><br>
+
+## Goal of the Project
 Conduct a Customer Segmentation analysis and create a dashboard that would be helpful for future Customer Segmentation task. The users will be segmented based on 3 metrics - Recency, Frequency, and overall Monetary value for the business.
- 
-</details>
+<br><br>
 
 
 
-<details><summary><strong>Dataset Overview</strong></summary><br>
+## Technologies Used
+<strong>Google BigQuery | </strong>For Exploratory Data Analysis, Data Cleaining, Manipulation, and Aggregation.<br>
+<strong>Tableau | </strong>For Data Visualization and overall Dashboard creation.<br><br>
+
+
+## Dataset Overview
 <strong>Table Used for analysis:</strong>
 
 | Row | InvoiceNo | StockCode | Description | Quantity | InvoiceDate | UnitPrice | CustomerID | Country |
@@ -24,23 +28,25 @@ Conduct a Customer Segmentation analysis and create a dashboard that would be he
 |541908|566405|23309|SET OF 60 I LOVE LONDON CAKE CASES|48|2011-09-12 13:41:00 UTC|0.55|17919|United Kingdom|
 |541909|566405|22733|3D TRADITIONAL CHRISTMAS STICKERS|18|2011-09-12 13:41:00 UTC|1.25|17919|United Kingdom|
 
-<em>Table Total Rows: <strong>541909</strong> </em><br><br>
+<em>Table Total Rows: <strong>541909</strong> </em><br>
 
 Dataset has a lot of Null CustomerIDs, Negative Quantity Values (that were used to apply discounts or fix accounting errors), Null item descriptions, and all user order items were shown individually (same customerID could have 100 rows for one order).
-</details>
+<br><br>
 
 
 
-<details><summary><strong>Technologies Used</strong></summary><br>
-<strong>Google BigQuery | </strong>For Exploratory Data Analysis, Data Cleaining, Manipulation, and Aggregation.<br>
-<strong>Tableau | </strong>For Data Visualization and overall Dashboard creation.
-</details>
+## Working with Data
 
+### Started off with initial data cleaning, aggregation, and Recency | Frequency | Monetary value calculations:
+<em>
+In WHERE clause I've set the time boundaries, filtered entries with no CustomerIds attached, and only showed entries where a positive amount of items were sold to avoid negative values. <br>
+In GROUP BY clause I've grouped data to show combined R,F,M values for each individual user.<br>
+In SELECT statement I've calculated:<br>
+* Recency with Date Difference function by subtracting the latest order date of the customer from predetermined hypothetical current date).<br>
+* Frequency by COUNTing all distinct InvoiceIDs each customer had.<br>
+* Monetary value by adding up all purchases.</em>
 
-
-<details><summary><strong>Data Preparation</strong></summary><br>
-
-<strong>Started off with initial data cleaning, aggregation, and Recency | Frequency | Monetary value calculations:</strong>
+<details><summary>Query <em>(dropdown)</em></summary>
 
     SELECT  
         CustomerID,
@@ -54,16 +60,13 @@ Dataset has a lot of Null CustomerIDs, Negative Quantity Values (that were used 
         AND Quantity > 0 
         --Filtered out all of negative values for Monetary calculation that would result in negative numbers.
     GROUP BY CustomerID, Country
-<em>
-In WHERE clause I've set the time boundaries, filtered entries with no CustomerIds attached, and only showed entries where a positive amount of items were sold to avoid negative values. <br>
-In GROUP BY clause I've grouped date to show combined R,F,M values for each individual user.<br>
-In SELECT statement I've calculated:<br>
-* Recency with Date Difference function by subtracting the latest order date of the customer from predetermined hypothetical current date).<br>
-* Frequency by COUNTing all distinct InvoiceIDs each customer had.<br>
-* Monetary value by adding up all purchases.</em><br><br>
+</details>
 
 
-<strong>With now acquired Recency, Frequency, and Monetary values for each user, I've set quartile ranges that will be used for assigning scores later on:</strong>
+
+### With now acquired Recency, Frequency, and Monetary values for each customer, I've set quartile ranges that will be used for assigning scores later on:
+
+<details><summary>Query <em>(dropdown)</em></summary>
 
     WITH  rfm_values AS (
         SELECT  
@@ -92,9 +95,10 @@ In SELECT statement I've calculated:<br>
         APPROX_QUANTILES(Monetary, 4) [OFFSET(2)] AS m50,
         APPROX_QUANTILES(Monetary, 4) [OFFSET(3)] AS m75
     FROM rfm_values
+</details>
 
-
-<strong>Using the now set quartile ranges, I've assigned each user their R,F,M scores from 1-4 (4 being the highest):</strong>
+### Using the now set quartile ranges, I've assigned each customer their R,F,M scores from 1-4 (4 being the highest):
+<details><summary>Query <em>(dropdown)</em></summary>
 
        WITH  rfm_values AS (
        SELECT  
@@ -148,8 +152,14 @@ In SELECT statement I've calculated:<br>
               WHEN rfm_values.Monetary <= quartiles.m75 AND rfm_values.Monetary > quartiles.m50 THEN 3
               ELSE 4 END AS M
       FROM rfm_values , quartiles
+</details>
 
-Those scores were then used in final customer segmentation. 
+### Those scores were then used in final customers segmentation. 
+<em>I’ve chosen to use RFM scores individualy for better detail instead of joining F and M scores together, because when trying to distinguish between loyal and big spending customers, combined FM score makes it not as accurate. <br>
+The main segments are Best Customers, Loyal Customers, Big Spenders, High Potential and Low Potential Customers. The same ones apply for the At Risk category, but for the Lost segment I chose to show combined segments just for the High and Low Potential customers, as more in depth detail for that segment group seemed redundant. One outlier segment is in Active group, it being the New Customers segment.<br>
+In the outer query I've added additional grouping for the segments, to be able to quickly identify Active, At Risk, and Lost customers.</em>
+
+<details><summary>Query <em>(dropdown)</em></summary>
 
          rfm_scores AS (
          SELECT 
@@ -263,24 +273,15 @@ Those scores were then used in final customer segmentation.
                       THEN 'Lost Low Potential Customers'    
                 END AS rfm_segment 
           FROM  rfm_scores)
-
-<em>I’ve chosen to use RFM scores individualy for better detail instead of joining F and M scores together, because when trying to distinguish between loyal and big spending customers, combined FM score makes it not as accurate. </em><br>
-
-The main segments are Best Customers, Loyal Customers, Big Spenders, High Potential and Low Potential Customers. The same ones apply for the At Risk category, but for the Lost segment I chose to show combined segments just for the High and Low Potential customers, as more in depth detail for that segment group seemed redundant. One outlier segment is in Active group, it being the New Customers segment.<br>
-
-In the outer query I've added additional grouping for the segments, to be able to quickly identify Active, At Risk, and Lost customers.<
-
+</details>
 </details>
 
 
 
-<details><summary><strong>Data Visualization</strong></summary><br>
-  Insert text here
-</details>
+## Analysis Results
+![Ov1WtBM](https://github.com/user-attachments/assets/1556533e-de65-4ae1-b3f0-7dfc53528e6d)
 
 
-
-<details><summary><strong>Analysis Results</strong></summary><br>
 There are 4301 customers during the defined time period. 50% of those customers are still Active, 25% are currently At Risk of being Lost and the last 25% can be already considered as Lost. These customer groups are based on their last order recency. </br></br>
 Active customers group is healthy. The average order recency is around 20 days, and frequency of orders is around 6 per user. Average revenue per user is also very high being at around 3000$. From all of these customers, only one segment needs more attention from us, those being the New Customers. They recently purchased something from us for the first time, and we should encourage them to come back.</br></br>
 
