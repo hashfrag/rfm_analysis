@@ -19,7 +19,7 @@ Conduct a Customer Segmentation analysis and create a dashboard that would be he
 |1|536414|22139|null|56|2010-12-01 11:52:00 UTC|0.0|null|United Kingdom|
 |2|536544|22081|RIBBON REEL FLORA + FAUNA |1|2010-12-01 14:32:00 UTC|3.36|null|United Kingdom|
 |3|536544|22100|SKULLS SQUARE TISSUE BOX|1|2010-12-01 14:32:00 UTC|2.51|null|United Kingdom|
-|...|...|...|...|...|...|...|...|...|
+|...  |...        |...        |...          |...       |...          |...        |...         |...      |
 |541907|566405|22940|FELTCRAFT CHRISTMAS FAIRY|24|2011-09-12 13:41:00 UTC|4.25|17919|United Kingdom|
 |541908|566405|23309|SET OF 60 I LOVE LONDON CAKE CASES|48|2011-09-12 13:41:00 UTC|0.55|17919|United Kingdom|
 |541909|566405|22733|3D TRADITIONAL CHRISTMAS STICKERS|18|2011-09-12 13:41:00 UTC|1.25|17919|United Kingdom|
@@ -40,11 +40,114 @@ Dataset has a lot of Null CustomerIDs, Negative Quantity Values (that were used 
 
 <details><summary><strong>Data Preparation</strong></summary><br>
 
-Started off with recency, frequency and monetary value calculations. Filtered the results so that there would be no values with negative quantity, that result in negative revenue.
+<strong>Started off with initial data cleaning, aggregation, and Recency | Frequency | Monetary value calculations:</strong>
 
-Then I defined the quartiles using the approx_quantiles function. Used the OFFSET to only show 25th, 50th 75th quartiles, as having the Min and Max value in this case wasn’t necessary for me.
+    SELECT  
+        CustomerID,
+        Country,
+        DATE_DIFF('2011-12-01' , CAST(MAX(InvoiceDate) AS DATE), DAY) AS recency,
+        COUNT(DISTINCT InvoiceNO) AS frequency,
+        SUM(UnitPrice*Quantity) AS monetary
+    FROM  `tc-da-1.turing_data_analytics.rfm` AS original_table
+    WHERE InvoiceDate BETWEEN '2010-12-01' AND '2011-11-30'
+        AND CustomerID IS NOT NULL
+        AND Quantity > 0 
+        --Filtered out all of negative values for Monetary calculation that would result in negative numbers.
+    GROUP BY CustomerID, Country
+<em>
+In WHERE clause I've set the time boundaries, filtered entries with no CustomerIds attached, and only showed entries where a positive amount of items were sold to avoid negative values. <br>
+In GROUP BY clause I've grouped date to show combined R,F,M values for each individual user.<br>
+In SELECT statement I've calculated:<br>
+* Recency with Date Difference function by subtracting the latest order date of the customer from predetermined hypothetical current date).<br>
+* Frequency by COUNTing all distinct InvoiceIDs each customer had.<br>
+* Monetary value by adding up all purchases.</em><br><br>
 
-Then I’ve used those quartiles to score customers recenecy frequency and revenue from 1 to 4. 4 being the best.
+
+<strong>With now acquired Recency, Frequency, and Monetary values for each user, I've set quartile ranges that will be used for assigning scores later on:</strong>
+
+    WITH  rfm_values AS (
+        SELECT  
+            CustomerID,
+            Country,
+            DATE_DIFF('2011-12-01' , CAST(MAX(InvoiceDate) AS DATE), DAY) AS recency,
+            COUNT(DISTINCT InvoiceNO) AS frequency,
+            SUM(UnitPrice*Quantity) AS monetary
+        FROM  `tc-da-1.turing_data_analytics.rfm` AS original_table
+        WHERE InvoiceDate BETWEEN '2010-12-01' AND '2011-11-30'
+            AND CustomerID IS NOT NULL
+            AND Quantity > 0 
+            --Filtered out all of negative values for Monetary calculation that would result in negative numbers.
+        GROUP BY CustomerID, Country )
+
+    SELECT--Recency Quartiles Calculation
+        APPROX_QUANTILES(Recency, 4)  [OFFSET(1)] AS r25,
+        APPROX_QUANTILES(Recency, 4)  [OFFSET(2)] AS r50,
+        APPROX_QUANTILES(Recency, 4)  [OFFSET(3)] AS r75,
+        --Frequency Quartiles Calculation
+        APPROX_QUANTILES(Frequency, 4)[OFFSET(1)] AS f25,
+        APPROX_QUANTILES(Frequency, 4)[OFFSET(2)] AS f50,
+        APPROX_QUANTILES(Frequency, 4)[OFFSET(3)] AS f75,
+        --Monetary Quartiles Calculation
+        APPROX_QUANTILES(Monetary, 4) [OFFSET(1)] AS m25,
+        APPROX_QUANTILES(Monetary, 4) [OFFSET(2)] AS m50,
+        APPROX_QUANTILES(Monetary, 4) [OFFSET(3)] AS m75
+    FROM rfm_values
+
+
+<strong>Using the now set quartile ranges, I've assigned each user their R,F,M scores from 1-4 (4 being the highest):</strong>
+
+       WITH  rfm_values AS (
+       SELECT  
+             CustomerID,
+             Country,
+             DATE_DIFF('2011-12-01' , CAST(MAX(InvoiceDate) AS DATE), DAY) AS recency,
+             COUNT(DISTINCT InvoiceNO) AS frequency,
+             SUM(UnitPrice*Quantity) AS monetary
+       FROM  `tc-da-1.turing_data_analytics.rfm` AS original_table
+       WHERE InvoiceDate BETWEEN '2010-12-01' AND '2011-11-30'
+             AND CustomerID IS NOT NULL
+             AND Quantity > 0 
+             --Filtered out all of negative values for Monetary calculation that would result in negative numbers.
+       GROUP BY CustomerID, Country ),
+ 
+       quartiles AS (
+       SELECT--Recency Quartiles Calculation
+             APPROX_QUANTILES(Recency, 4)  [OFFSET(1)] AS r25,
+             APPROX_QUANTILES(Recency, 4)  [OFFSET(2)] AS r50,
+             APPROX_QUANTILES(Recency, 4)  [OFFSET(3)] AS r75,
+             --Frequency Quartiles Calculation
+             APPROX_QUANTILES(Frequency, 4)[OFFSET(1)] AS f25,
+             APPROX_QUANTILES(Frequency, 4)[OFFSET(2)] AS f50,
+             APPROX_QUANTILES(Frequency, 4)[OFFSET(3)] AS f75,
+             --Monetary Quartiles Calculation
+             APPROX_QUANTILES(Monetary, 4) [OFFSET(1)] AS m25,
+             APPROX_QUANTILES(Monetary, 4) [OFFSET(2)] AS m50,
+             APPROX_QUANTILES(Monetary, 4) [OFFSET(3)] AS m75
+       FROM rfm_values)
+
+
+    SELECT 
+        rfm_values.CustomerID,
+        rfm_values.Country,
+        rfm_values.Recency,
+        rfm_values.Frequency,
+        rfm_values.Monetary,
+        -- Assigned Recency Quartiles
+        CASE  WHEN rfm_values.Recency <= quartiles.r25 THEN 4
+              WHEN rfm_values.Recency <= quartiles.r50 AND rfm_values.Recency > quartiles.r25 THEN 3
+              WHEN rfm_values.Recency <= quartiles.r75 AND rfm_values.Recency > quartiles.r50 THEN 2
+              ELSE 1 END AS R,
+        -- Assigned Frequency Quartiles
+        CASE  WHEN rfm_values.Frequency <= quartiles.f25 THEN 1
+              WHEN rfm_values.Frequency <= quartiles.f50 AND rfm_values.Frequency > quartiles.f25 THEN 2
+              WHEN rfm_values.Frequency <= quartiles.f75 AND rfm_values.Frequency > quartiles.f50 THEN 3
+              ELSE 4 END AS F,
+        -- Assigned Monetary Quartiles
+        CASE  WHEN rfm_values.Monetary <= quartiles.m25 THEN 1
+              WHEN rfm_values.Monetary <= quartiles.m50 AND rfm_values.Monetary > quartiles.m25 THEN 2
+               WHEN rfm_values.Monetary <= quartiles.m75 AND rfm_values.Monetary > quartiles.m50 THEN 3
+               ELSE 4 END AS M
+      FROM rfm_values , quartiles
 
 Those scores were then used in final customer segmentation. I’ve chosen to use RFM scores individualy for better detail instead of joining F and M scores together, because when trying to distinguish between loyal and big spending customers, combined FM score makes it not as accurate. 
 
