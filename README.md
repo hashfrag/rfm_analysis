@@ -4,8 +4,9 @@ Link to the Tableau Dashboard: </br>
 https://public.tableau.com/app/profile/ovidijus.pelakauskas/viz/M3S3RFM_17335051289480/Dashboard1 </br>
 
 
+
 ## Goal of the Project
-Conduct a Customer Segmentation analysis and create a dashboard that would be helpful for future Customer Segmentation task. The users will be segmented based on 3 metrics - Recency, Frequency, and overall Monetary value for the business.
+While working with the data from Online Commerce Store, conduct a Customer Segmentation analysis and create a dashboard that would be helpful for future Customer Segmentation tasks. The users will be segmented based on 3 metrics - Recency, Frequency, and overall Monetary value for the business.
 <br><br>
 
 
@@ -13,6 +14,7 @@ Conduct a Customer Segmentation analysis and create a dashboard that would be he
 ## Technologies Used
 <strong>Google BigQuery | </strong>For Exploratory Data Analysis, Data Cleaining, Manipulation, and Aggregation.<br>
 <strong>Tableau | </strong>For Data Visualization and overall Dashboard creation.<br><br>
+
 
 
 ## Dataset Overview
@@ -29,6 +31,15 @@ Conduct a Customer Segmentation analysis and create a dashboard that would be he
 |541909|566405|22733|3D TRADITIONAL CHRISTMAS STICKERS|18|2011-09-12 13:41:00 UTC|1.25|17919|United Kingdom|
 
 <em>Table Total Rows: <strong>541909</strong> </em><br>
+
+<strong>| InvoiceNo   | </strong> Generated number for each order.<br>
+<strong>| StockCode   | </strong> Purchased items code refferenced in internal systems (won't be needed for this analysis).<br>
+<strong>| Description | </strong> Item description most of the time, sometimes used to indicate other processes when doing refunds, fixing accounting errors.<br>
+<strong>| Quantity    | </strong> How many of each item was purchased.<br>
+<strong>| InvoiceDate | </strong> Date when the order was placed.<br>
+<strong>| UnitPrice   | </strong> Price of the item per 1 quantity.<br>
+<strong>| CustomerID  | </strong> Unique Customer identifier.<br>
+<strong>| Country     | </strong> Country in which the order was placed.<br>
 
 Dataset has a lot of Null CustomerIDs, Negative Quantity Values (that were used to apply discounts or fix accounting errors), Null item descriptions, and all user order items were shown individually (same customerID could have 100 rows for one order).
 <br><br>
@@ -63,7 +74,6 @@ In SELECT statement I've calculated:<br>
 </details>
 
 
-
 ### With now acquired Recency, Frequency, and Monetary values for each customer, I've set quartile ranges that will be used for assigning scores later on:
 
 <details><summary>Query <em>(dropdown)</em></summary>
@@ -96,6 +106,7 @@ In SELECT statement I've calculated:<br>
         APPROX_QUANTILES(Monetary, 4) [OFFSET(3)] AS m75
     FROM rfm_values
 </details>
+
 
 ### Using the now set quartile ranges, I've assigned each customer their R,F,M scores from 1-4 (4 being the highest):
 <details><summary>Query <em>(dropdown)</em></summary>
@@ -153,6 +164,7 @@ In SELECT statement I've calculated:<br>
               ELSE 4 END AS M
       FROM rfm_values , quartiles
 </details>
+
 
 ### Those scores were then used in final customers segmentation. 
 <em>I’ve chosen to use RFM scores individualy for better detail instead of joining F and M scores together, because when trying to distinguish between loyal and big spending customers, combined FM score makes it not as accurate. <br>
@@ -274,7 +286,6 @@ In the outer query I've added additional grouping for the segments, to be able t
                 END AS rfm_segment 
           FROM  rfm_scores)
 </details>
-</details>
 
 
 
@@ -282,10 +293,10 @@ In the outer query I've added additional grouping for the segments, to be able t
 ![Ov1WtBM](https://github.com/user-attachments/assets/1556533e-de65-4ae1-b3f0-7dfc53528e6d)
 
 
-There are 4301 customers during the defined time period. 50% of those customers are still Active, 25% are currently At Risk of being Lost and the last 25% can be already considered as Lost. These customer groups are based on their last order recency. </br></br>
-Active customers group is healthy. The average order recency is around 20 days, and frequency of orders is around 6 per user. Average revenue per user is also very high being at around 3000$. From all of these customers, only one segment needs more attention from us, those being the New Customers. They recently purchased something from us for the first time, and we should encourage them to come back.</br></br>
+There are 4301 customers during the defined time period. 50% of those customers are still Active, 25% are currently At Risk of being Lost and the last 25% can be already considered as Lost. These customer groups are based on their last order recency. </br>
+Active customers group is healthy. The average order recency is around 20 days, and frequency of orders is around 6 per user. Average revenue per user is also very high being at around 3000$. From all of these customers, only one segment needs more attention from us, those being the New Customers. They recently purchased something from us for the first time, and we should encourage them to come back.</br>
 
-Customers that are currently At Risk have Average Order Recency of around 85 days. 3 Months from the last order is quite a long time, and some of those customers are quite valuable to the business, thus they need more attention from us, so that they would come back and shop with us again. </br></br>
+Customers that are currently At Risk have Average Order Recency of around 85 days. 3 Months from the last order is quite a long time, and some of those customers are quite valuable to the business, thus they need more attention from us, so that they would come back and shop with us again. </br>
 
 <strong>Customer segments should be targeted in this order:</strong>
 1. Best Customers and Big Spenders (At Risk). They result in the best monetary gains for the business, while having a smaller amount of people in those groups (lower amount of customers means less effort for the business while communicating with them). 
