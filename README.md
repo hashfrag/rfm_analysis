@@ -9,27 +9,58 @@ Conduct a Customer Segmentation analysis and create a dashboard that would be he
  
 </details>
 
+
+
 <details><summary><strong>Dataset Overview</strong></summary><br>
-<em>Table Total Rows: <strong>541909</strong> </em><br>
-  
+<strong>Table Used for analysis:</strong>
+
 | Row | InvoiceNo | StockCode | Description | Quantity | InvoiceDate | UnitPrice | CustomerID | Country |
 | --- | --------- | --------- | ----------- | -------- | ----------- | --------- | ---------- | ------- |
-|
+|1|536414|22139|null|56|2010-12-01 11:52:00 UTC|0.0|null|United Kingdom|
+|2|536544|22081|RIBBON REEL FLORA + FAUNA |1|2010-12-01 14:32:00 UTC|3.36|null|United Kingdom|
+|3|536544|22100|SKULLS SQUARE TISSUE BOX|1|2010-12-01 14:32:00 UTC|2.51|null|United Kingdom|
+|...|...|...|...|...|...|...|...|...|
+|541907|566405|22940|FELTCRAFT CHRISTMAS FAIRY|24|2011-09-12 13:41:00 UTC|4.25|17919|United Kingdom|
+|541908|566405|23309|SET OF 60 I LOVE LONDON CAKE CASES|48|2011-09-12 13:41:00 UTC|0.55|17919|United Kingdom|
+|541909|566405|22733|3D TRADITIONAL CHRISTMAS STICKERS|18|2011-09-12 13:41:00 UTC|1.25|17919|United Kingdom|
 
+<em>Table Total Rows: <strong>541909</strong> </em><br><br>
 
+Dataset has a lot of Null CustomerIDs, Negative Quantity Values (that were used to apply discounts or fix accounting errors), Null item descriptions, and all user order items were shown individually (same customerID could have 100 rows for one order).
 </details>
+
+
 
 <details><summary><strong>Technologies Used</strong></summary><br>
-  Insert text here
+<strong>Google BigQuery | </strong>For Exploratory Data Analysis, Data Cleaining, Manipulation, and Aggregation.<br>
+<strong>Tableau | </strong>For Data Visualization and overall Dashboard creation.
 </details>
 
+
+
 <details><summary><strong>Data Preparation</strong></summary><br>
-  Insert text here
+
+Started off with recency, frequency and monetary value calculations. Filtered the results so that there would be no values with negative quantity, that result in negative revenue.
+
+Then I defined the quartiles using the approx_quantiles function. Used the OFFSET to only show 25th, 50th 75th quartiles, as having the Min and Max value in this case wasn’t necessary for me.
+
+Then I’ve used those quartiles to score customers recenecy frequency and revenue from 1 to 4. 4 being the best.
+
+Those scores were then used in final customer segmentation. I’ve chosen to use RFM scores individualy for better detail instead of joining F and M scores together, because when trying to distinguish between loyal and big spending customers, combined FM score makes it not as accurate. 
+
+The main segments are Best Customers, Loyal Customers, Big Spenders, High Potential and Low Potential Customers. The same ones apply for the At Risk category, but for the Lost segment I chose to show combined segments just for the High and Low Potential customers, as more in depth detail for that segment group seemed redundant. One outlier segment is in Active group, it being the New Customers segment.
+
+In the outer query I added additional grouping for the segments, to be able to quickly identify Active, At Risk, and Lost customers.
+
 </details>
+
+
 
 <details><summary><strong>Data Visualization</strong></summary><br>
   Insert text here
 </details>
+
+
 
 <details><summary><strong>Analysis Results</strong></summary><br>
 There are 4301 customers during the defined time period. 50% of those customers are still Active, 25% are currently At Risk of being Lost and the last 25% can be already considered as Lost. These customer groups are based on their last order recency. </br></br>
